@@ -65,42 +65,42 @@ def add_task():
     if data.get('task_description'):
         columns += ", task_description"
         placeholders += ", ?"
-        values =+ (data.get('task_description'),)
+        values += (data.get('task_description'),)
     
     if data.get('due_date'):
         columns += ", due_date"
         placeholders += ", ?"
-        values =+ (data.get('due_date'),)
+        values += (data.get('due_date'),)
     
     if data.get('priority'):
         columns += ", priority"
         placeholders += ", ?"
-        values =+ (data.get('priority'),)
+        values += (data.get('priority'),)
 
     if data.get('status'):
         columns += ", status"
         placeholders += ", ?"
-        values =+ (data.get('status'),)
+        values += (data.get('status'),)
     
     if data.get('parent_task_id'):
         columns += ", parent_task_id"
         placeholders += ", ?"
-        values =+ (data.get('parent_task_id'),)
+        values += (data.get('parent_task_id'),)
     
     if data.get('is_recurring'):
         columns += ", is_recurring"
         placeholders += ", ?"
-        values =+ (data.get('is_recurring'),)
+        values += (data.get('is_recurring'),)
     
     if data.get('recurring_frequency'):
         columns += ", recurring_frequency"
         placeholders += ", ?"
-        values =+ (data.get('recurring_frequency'),)
+        values += (data.get('recurring_frequency'),)
             
     if data.get('recurrence_rule'):
         columns += ", recurrence_rule"
         placeholders += ", ?"
-        values =+ (data.get('recurrence_rule'),)
+        values += (data.get('recurrence_rule'),)
     
     query = f"""
         INSERT INTO tasks ({columns})
@@ -157,9 +157,8 @@ def update_task():
     return redirect(url_for('index'))
 
 @app.route("/remove/<task_id>")
-def remove_task():
-    taskId = request.args['task_id']
-    query = f"DELETE FROM tasks WHERE task_id={taskId}"
+def remove_task(task_id):
+    query = f"DELETE FROM tasks WHERE task_id={task_id}"
     dbCon = make_db_connection()
     dbCur = dbCon.cursor()
     dbCur.execute(query)
