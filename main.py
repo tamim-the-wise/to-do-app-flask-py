@@ -23,7 +23,7 @@ def check_table_exists(tableName):
 if (not check_table_exists('tasks')):
     dbCon = make_db_connection()
     dbCur = dbCon.cursor()
-    sqlCommand = """CREATE TABLE tasks (
+    query = """CREATE TABLE tasks (
   task_id INTEGER PRIMARY KEY,
   task_title VARCHAR(255) NOT NULL,
   task_description TEXT,
@@ -33,14 +33,54 @@ if (not check_table_exists('tasks')):
   parent_task_id INTEGER REFERENCES tasks(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  completed_at TIMESTAMP WITH TIME ZONE,
-  is_recurring BOOLEAN DEFAULT FALSE,
-  recurring_frequency VARCHAR(20) CHECK (recurring_frequency IN ('daily', 'weekly', 'monthly')),
-  recurrence_rule varchar(30)
+  completed_at TIMESTAMP WITH TIME ZONE
         );"""
     
-    dbCur.execute(sqlCommand)
+    dbCur.execute(query)
     close_db_connection(dbCon)
+
+
+# def organize_tasks_hierarchically(tasks):
+#   """
+#   This function takes a list of tasks and organizes them into a nested structure
+#   representing the parent-child relationships (hierarchy) for presentation.
+
+#   Args:
+#       tasks: A list of dictionaries representing tasks, each containing an "id"
+#              and a "parent_id" field (can be None for main tasks).
+
+#   Returns:
+#       A nested list or dictionary representing the organized task hierarchy.
+#   """
+#   organized_tasks = []
+#   for task in tasks:
+#     # Check if task has a parent (subtask)
+#     if task["parent_id"] is None:
+#       # Main task, add it to the top level
+#       organized_tasks.append(task)
+#       organized_tasks.append(organize_subtasks(tasks, task["id"]))
+#     # Skip processing subtasks handled recursively below
+#   return organized_tasks
+
+# def organize_subtasks(tasks, parent_id):
+#   """
+#   This helper function recursively finds and organizes subtasks for a given parent task.
+
+#   Args:
+#       tasks: A list of dictionaries representing tasks.
+#       parent_id: The ID of the parent task for which to find subtasks.
+
+#   Returns:
+#       A nested list or dictionary containing the subtasks for the given parent.
+#   """
+#   subtasks = []
+#   for task in tasks:
+#     if task["parent_id"] == parent_id:
+#       subtasks.append(task)
+#       # Recursive call to find subtasks for this subtask
+#       subtasks.append(organize_subtasks(tasks, task["id"]))
+#   return subtasks if subtasks else None  # Return None if no subtasks found
+
 
 app = Flask(__name__)
 
@@ -138,15 +178,6 @@ def update_task():
     
     if data.get('parent_task_id'):
         query += f"parent_task_id = {data.get('parent_task_id')}, "
-    
-    if data.get('is_recurring'):
-        query += f"is_recurring = {data.get('is_recurring')}, "
-    
-    if data.get('recurring_frequency'):
-        query += f"recurring_frequency = {data.get('recurring_frequency')}, "
-            
-    if data.get('recurrence_rule'):
-        query += f"recurrence_rule = {data.get('recurrence_rule')}, "
 
     query = query[:-2] + f"WHERE task_id = {taskId}"
     dbCon = make_db_connection()

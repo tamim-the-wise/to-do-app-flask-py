@@ -2,17 +2,20 @@ addTaskBtn = document.querySelector(".add-task-btn");
 
 
 addTaskBtn.addEventListener('click', () => {
-    taskTitle = document.querySelector(".task-title").value;
-    taskDescription = document.querySelector(".task-description").value;
-    taskPriority = Number(document.querySelector(".task-priority").value);
-    taskStatus = document.querySelector(".task-status").value;
+    taskTitle = "Do Math HW"
+    taskDescription = "Do home tutor's math hw"
+    dueDate = "06/22/2024"
+    parentTaskId = 1
     fetch("/add", {
         method: "POST",
         headers: {
             "Content-type": "application/json"
         },
         body: JSON.stringify({
-            task_title: taskTitle
+            task_title: taskTitle,
+            task_description: taskDescription,
+            due_date: dueDate,
+            parent_task_id: parentTaskId
         })
     });
 });
