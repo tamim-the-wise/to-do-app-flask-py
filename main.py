@@ -6,18 +6,15 @@ dbName = "todo.db"
 def make_db_connection():
     return sqlite3.connect(f"{dbName}")
 
-def close_db_connection(db):
-    db.close()
-
 def check_table_exists(tableName):
     db_con = make_db_connection()
     db_cur = db_con.cursor()
     listOfTables = db_cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';").fetchall()
     if listOfTables == []:
-        close_db_connection(db_con)
+        db_con.close()
         return False
     else:
-        close_db_connection(db_con)       
+        db_con.close()     
         return True
 
 if (not check_table_exists('tasks')):
@@ -27,72 +24,77 @@ if (not check_table_exists('tasks')):
   task_id INTEGER PRIMARY KEY,
   task_title VARCHAR(255) NOT NULL,
   task_description TEXT,
-  due_date TIMESTAMP,
   priority SMALLINT CHECK (priority BETWEEN 1 AND 3) DEFAULT 3,
   status VARCHAR(20) CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
   parent_task_id INTEGER REFERENCES tasks(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  completed_at TIMESTAMP WITH TIME ZONE
+  subtasks INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );"""
     
     dbCur.execute(query)
-    close_db_connection(dbCon)
+    dbCon.close()
 
+def add_subtask():
+    dbCon = make_db_connection()
+    dbCur = dbCon.cursor()
 
-# def organize_tasks_hierarchically(tasks):
-#   """
-#   This function takes a list of tasks and organizes them into a nested structure
-#   representing the parent-child relationships (hierarchy) for presentation.
+    query1 = """
+        SELECT task_id, parent_task_id From tasks
+        Order By task_id Desc LIMIT 1;
+    """
+    data = dbCur.execute(query1).fetchone()
+    subtaskId = data[0]
+    parentTaskId = data[1]
 
-#   Args:
-#       tasks: A list of dictionaries representing tasks, each containing an "id"
-#              and a "parent_id" field (can be None for main tasks).
+    query2 = f"Select subtasks From tasks Where task_id = {parentTaskId}"
+    data = dbCur.execute(query2).fetchone()
+    subtasks = data[0]
 
-#   Returns:
-#       A nested list or dictionary representing the organized task hierarchy.
-#   """
-#   organized_tasks = []
-#   for task in tasks:
-#     # Check if task has a parent (subtask)
-#     if task["parent_id"] is None:
-#       # Main task, add it to the top level
-#       organized_tasks.append(task)
-#       organized_tasks.append(organize_subtasks(tasks, task["id"]))
-#     # Skip processing subtasks handled recursively below
-#   return organized_tasks
+    if subtasks is None:
+        query3 = f"UPDATE tasks SET subtasks = {subtaskId} WHERE task_id = {parentTaskId}"
+    else:
+        query3 = f"UPDATE tasks SET subtasks = {subtasks}{subtaskId} WHERE task_id = {parentTaskId}"
 
-# def organize_subtasks(tasks, parent_id):
-#   """
-#   This helper function recursively finds and organizes subtasks for a given parent task.
+    dbCur.execute(query3)
+    dbCon.commit()
 
-#   Args:
-#       tasks: A list of dictionaries representing tasks.
-#       parent_id: The ID of the parent task for which to find subtasks.
+    dbCon.close()
 
-#   Returns:
-#       A nested list or dictionary containing the subtasks for the given parent.
-#   """
-#   subtasks = []
-#   for task in tasks:
-#     if task["parent_id"] == parent_id:
-#       subtasks.append(task)
-#       # Recursive call to find subtasks for this subtask
-#       subtasks.append(organize_subtasks(tasks, task["id"]))
-#   return subtasks if subtasks else None  # Return None if no subtasks found
+def find_subtasks_for_task(rootTask, subtasks):
+    subtaskList = []
+    for subtaskId in rootTask[6]:
+        for subtask in subtasks:
+            if subtask[0] == int(subtaskId):
+                if subtask[6] is None:
+                    subtaskList.append({"task_id": subtask[0], "task_title": subtask[1], "task_description": subtask[2], "status": subtask[4]})
+                else:
+                    nestedSubtaskList = find_subtasks_for_task(subtask, subtasks)
+                    subtaskList.append({"task_id": subtask[0], "task_title": subtask[1], "task_description": subtask[2], "status": subtask[4], "subtasks": nestedSubtaskList})
 
+    return subtaskList
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-    query = "SELECT * FROM tasks"
+    query1 = "SELECT * FROM tasks WHERE parent_task_id is NULL"
+    query2 = "SELECT * FROM tasks WHERE parent_task_id is NOT NULL"
     dbCon = make_db_connection()
     dbCur = dbCon.cursor()
-    data = dbCur.execute(query).fetchall()
+    rootTasks = dbCur.execute(query1).fetchall()
+    subtasks = dbCur.execute(query2).fetchall()
     dbCon.commit()
-    close_db_connection(dbCon)
-    return render_template("index.html", data=data)
+    dbCon.close()
+    taskList = []
+    for task in rootTasks:
+        if task[6] is None:
+            taskList.append({"task_id": task[0], "task_title": task[1], "task_description": task[2], "status": task[4]})
+        else:
+            subtaskList = find_subtasks_for_task(task, subtasks)
+            taskList.append({"task_id": task[0], "task_title": task[1], "task_description": task[2], "status": task[4], "subtasks": subtaskList})
+            print(taskList)
+    
+    return render_template("index.html", data=taskList)
 
 @app.route("/add", methods=['POST'])
 def add_task():
@@ -107,41 +109,16 @@ def add_task():
         placeholders += ", ?"
         values += (data.get('task_description'),)
     
-    if data.get('due_date'):
-        columns += ", due_date"
-        placeholders += ", ?"
-        values += (data.get('due_date'),)
-    
     if data.get('priority'):
         columns += ", priority"
         placeholders += ", ?"
         values += (data.get('priority'),)
-
-    if data.get('status'):
-        columns += ", status"
-        placeholders += ", ?"
-        values += (data.get('status'),)
     
     if data.get('parent_task_id'):
         columns += ", parent_task_id"
         placeholders += ", ?"
         values += (data.get('parent_task_id'),)
-    
-    if data.get('is_recurring'):
-        columns += ", is_recurring"
-        placeholders += ", ?"
-        values += (data.get('is_recurring'),)
-    
-    if data.get('recurring_frequency'):
-        columns += ", recurring_frequency"
-        placeholders += ", ?"
-        values += (data.get('recurring_frequency'),)
-            
-    if data.get('recurrence_rule'):
-        columns += ", recurrence_rule"
-        placeholders += ", ?"
-        values += (data.get('recurrence_rule'),)
-    
+
     query = f"""
         INSERT INTO tasks ({columns})
         VALUES ({placeholders})
@@ -150,7 +127,11 @@ def add_task():
     dbCur = dbCon.cursor()
     dbCur.execute(query, values)
     dbCon.commit()
-    close_db_connection(dbCon)
+    dbCon.close()
+    
+    if data.get('parent_task_id'):
+        add_subtask()
+
     return redirect(url_for('index'))
 
 @app.route("/update", methods=['POST'])
@@ -167,9 +148,6 @@ def update_task():
     if data.get('task_description'):
         query += f"task_description = {data.get('task_description')}, "
     
-    if data.get('due_date'):
-        query += f"due_date = {data.get('due_date')}, "
-    
     if data.get('priority'):
         query += f"priority = {data.get('priority')}, "
 
@@ -184,7 +162,7 @@ def update_task():
     dbCur = dbCon.cursor()
     dbCur.execute(query)
     dbCon.commit()
-    close_db_connection(dbCon)
+    dbCon.close()
     return redirect(url_for('index'))
 
 @app.route("/remove/<task_id>")
@@ -194,7 +172,7 @@ def remove_task(task_id):
     dbCur = dbCon.cursor()
     dbCur.execute(query)
     dbCon.commit()
-    close_db_connection(dbCon)
+    dbCon.close()
     return redirect(url_for('index'))
 
 
