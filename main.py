@@ -27,7 +27,7 @@ if (not check_table_exists('tasks')):
   priority SMALLINT CHECK (priority BETWEEN 1 AND 3) DEFAULT 3,
   status VARCHAR(20) CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
   parent_task_id INTEGER REFERENCES tasks(id),
-  subtasks INTEGER,
+  subtasks TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );"""
     

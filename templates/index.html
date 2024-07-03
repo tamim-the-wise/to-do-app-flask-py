@@ -7,23 +7,38 @@
     <title>To-Do app</title>
 </head>
 <body>
-    <input type="text" class="task-title-input">
+    <!-- <input type="text" class="task-title-input">
     <input type="text" class="task-description-input">
     <input type="text" class="task-priority-input">
     <input type="text" class="task-due-input">
     <input type="text" class="is-recurring-input">
     <input type="text" class="recurring-frequency-input">
-    <input type="text" class="recurrence-rule-input">
+    <input type="text" class="recurrence-rule-input"> -->
     <button class="add-task-btn">Add Task</button>
 
+    {% macro subtask(subtasks) -%}
+        {% for item in subtasks %}
+        <div class="task" data-task-id={{item["task_id"]}}>
+            <div class="task-title">{{item["task_title"]}}</div>
+            {% if not item["task_description"] == None %}
+            <div class="task-description">{{item["task_description"]}}</div>
+            {% endif %}
+            {% if "subtasks" in item %}
+            {{ subtask(item["subtasks"]) }}
+            {% endif %}
+        </div>
+        {% endfor %}
+    {%- endmacro %}
+
     {% for item in data %}
-    <div class="task" data-task-id={{item[0]}}>
-        <div class="task-title">{{item[1]}}</div>
-        {% if not item[2] == None %}
-        <div class="task-description">{{item[2]}}</div>
+    <div class="task" data-task-id={{item["task_id"]}}>
+        <div class="task-title">{{item["task_title"]}}</div>
+        {% if not item["task_description"] == None %}
+        <div class="task-description">{{item["task_description"]}}</div>
         {% endif %}
-        <div class="task-due-date">{{item[3]}}</div>
-        <div class="task-status">{{item[5]}}</div>
+        {% if "subtasks" in item %}
+        {{ subtask(item["subtasks"]) }}
+        {% endif %}
     </div>
     {% endfor %}
     <div class="error">{{error}}</div>
