@@ -14,7 +14,14 @@
     <input type="text" class="is-recurring-input">
     <input type="text" class="recurring-frequency-input">
     <input type="text" class="recurrence-rule-input"> -->
-    <button class="add-task-btn">Add Task</button>
+    
+    <div class="add-task-form">
+        <input type="text" placeholder="Title" class="task-title-input">
+        <br>
+        <input type="text" placeholder="Description" class="task-description-input">
+        <br>
+        <button class="add-task-btn">Add Task</button>
+    </div>
 
     {% macro subtask(subtasks) -%}
         {% for item in subtasks %}
@@ -41,7 +48,6 @@
         {% endif %}
     </div>
     {% endfor %}
-    <div class="error">{{error}}</div>
     <script src="static/scripts/index.js"></script>
 </body>
 </html>

@@ -24,7 +24,7 @@ if (not check_table_exists('tasks')):
   task_id INTEGER PRIMARY KEY,
   task_title VARCHAR(255) NOT NULL,
   task_description TEXT,
-  priority SMALLINT CHECK (priority BETWEEN 1 AND 3) DEFAULT 3,
+  order_index INTEGER DEFAULT 0,
   status VARCHAR(20) CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
   parent_task_id INTEGER REFERENCES tasks(id),
   subtasks TEXT,
@@ -92,7 +92,6 @@ def index():
         else:
             subtaskList = find_subtasks_for_task(task, subtasks)
             taskList.append({"task_id": task[0], "task_title": task[1], "task_description": task[2], "status": task[4], "subtasks": subtaskList})
-            print(taskList)
     
     return render_template("index.html", data=taskList)
 
@@ -109,10 +108,10 @@ def add_task():
         placeholders += ", ?"
         values += (data.get('task_description'),)
     
-    if data.get('priority'):
-        columns += ", priority"
+    if data.get('order_index'):
+        columns += ", order_index"
         placeholders += ", ?"
-        values += (data.get('priority'),)
+        values += (data.get('order_index'),)
     
     if data.get('parent_task_id'):
         columns += ", parent_task_id"
@@ -148,8 +147,8 @@ def update_task():
     if data.get('task_description'):
         query += f"task_description = {data.get('task_description')}, "
     
-    if data.get('priority'):
-        query += f"priority = {data.get('priority')}, "
+    if data.get('order_index'):
+        query += f"priority = {data.get('order_index')}, "
 
     if data.get('status'):
         query += f"status = {data.get('status')}, "
